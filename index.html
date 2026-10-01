@@ -76,19 +76,24 @@
 
   let inventory = [];
 
-  async function loadStock() {
+async function loadStock() {
     if (SCRIPT_URL.includes("SEM_VLOZTE")) {
       document.querySelector("#stockTable tbody").innerHTML = 
         '<tr><td colspan="4" style="color:orange;">Ešte nie je nastavená URL adresa prepojenia na Google tabuľku.</td></tr>';
       return;
     }
     try {
-      const res = await fetch(SCRIPT_URL);
+            const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        redirect: "follow"
+      });
+
       inventory = await res.json();
       renderUI();
     } catch (err) {
       console.error("Chyba načítania:", err);
-      alert("Nepodarilo sa načítať skladové zásoby.");
+      alert("Nepodarilo sa načítať skladové zásoby: " + err.message);
     }
   }
 
