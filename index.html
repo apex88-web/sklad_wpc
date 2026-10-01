@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sklad WPC a Príslušenstva</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+    h1, h2 { color: #222; }
+    .card { background: #fafafa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 18px; margin-bottom: 25px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+    select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
+    button { background: #0066cc; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #0052a3; }
+    button:disabled { background: #999; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e1e4e8; }
+    th { background: #f0f2f5; font-size: 14px; }
+    .stock-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    .stock-ok { background: #e6f4ea; color: #137333; }
+    .stock-low { background: #fce8e6; color: #c5221f; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Skladová evidencia materiálu</h1>
+
+  <!-- Formulár pre výdaj -->
+  <div class="card">
+    <h2>Vyskladnenie materiálu</h2>
+    <form id="dispatchForm">
+      <div class="form-group">
+        <label for="itemSelect">Položka</label>
+        <select id="itemSelect" required>
+          <option value="">Načítavam skladové položky...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Množstvo na výdaj</label>
+        <input type="number" id="amount" min="1" step="any" placeholder="Zadajte počet" required>
+      </div>
+
+      <div class="form-group">
+        <label for="note">Poznámka / Zákazka</label>
+        <input type="text" id="note" placeholder="Napr. Terasa Zákazník">
+      </div>
+
+      <button type="submit" id="submitBtn">Potvrdiť výdaj zo skladu</button>
+    </form>
+  </div>
+
+  <!-- Tabuľka aktuálnych zásob -->
+  <h2>Aktuálny stav skladu</h2>
+  <table id="stockTable">
+    <thead>
+      <tr>
+        <th>Kód</th>
+        <th>Názov</th>
+        <th>Kategória</th>
+        <th>Zásoba</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="4">Načítavam dáta...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  // URL z Google Apps Scriptu doplníme neskôr
+  const SCRIPT_URL = "SEM_VLOZTE_APPS_SCRIPT_WEB_APP_URL";
+
+  let inventory = [];
+
+  async function loadStock() {
+    if (SCRIPT_URL.includes("SEM_VLOZTE")) {
+      document.querySelector("#stockTable tbody").innerHTML = 
+        '<tr><td colspan="4" style="color:orange;">Ešte nie je nastavená URL adresa prepojenia na Google tabuľku.</td></tr>';
+      return;
+    }
+    try {
+      const res = await fetch(SCRIPT_URL);
+      inventory = await res.json();
+      renderUI();
+    } catch (err) {
+      console.error("Chyba načítania:", err);
+      alert("Nepodarilo sa načítať skladové zásoby.");
+    }
+  }
+
+  function renderUI() {
+    const select = document.getElementById("itemSelect");
+    select.innerHTML = '<option value="">-- Vyberte položku --</option>';
+    
+    const tbody = document.querySelector("#stockTable tbody");
+    tbody.innerHTML = "";
+
+    inventory.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.id;
+      opt.textContent = `${item.nazov} (Skladom: ${item.mnozstvo} ${item.jednotka})`;
+      select.appendChild(opt);
+
+      const tr = document.createElement("tr");
+      const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
+      tr.innerHTML = `
+        <td><strong>${item.id}</strong></td>
+        <td>${item.nazov}</td>
+        <td>${item.kategoria}</td>
+        <td><span class="stock-badge ${badgeClass}">${item.mnozstvo} ${item.jednotka}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (SCRIPT_URL.includes("SEM_VLOZTE")) {
+      alert("Najskôr vložte URL adresu skriptu z Google Tabuľky.");
+      return;
+    }
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "Ukladám výdaj...";
+
+    const payload = {
+      id: document.getElementById("itemSelect").value,
+      mnozstvo: document.getElementById("amount").value,
+      poznamka: document.getElementById("note").value
+    };
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const result = await res.json();
+
+      if (result.status === "success") {
+        alert("Výdaj bol úspešne zaevidovaný.");
+        document.getElementById("dispatchForm").reset();
+        await loadStock();
+      } else {
+        alert("Chyba: " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Požiadavku sa nepodarilo odoslať.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Potvrdiť výdaj zo skladu";
+    }
+  });
+
+  loadStock();
+</script>
+</body>
+</html>
