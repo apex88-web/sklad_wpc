@@ -124,7 +124,7 @@
 
 <script>
   // SEM VLOŽTE VAŠU URL Z APPS SCRIPTU (končiacu na /exec)
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyD-d_0O2nRQ8eNEttd3jPdcGvehdFdgYH7Qhn2S4erf2tTgQftftKd6qUEVn_nj-OY/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzkONcmh4CfMh_iS66j9VRXKQNQ0io2KMn-H73-wYBSLPbkIg1eC1oOwhrLomS7sARI/exec";
 
   let inventory = [];
 
@@ -172,10 +172,17 @@
     }
 
     inventory.forEach(item => {
-      // Položka do výberu
+      // Výpočet celkových metrov, ak má položka definovanú dĺžku
+      let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
+      if (item.dlzka_m > 0) {
+        const celkovoMetrov = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
+        textZasoby += ` (${celkovoMetrov} bm)`;
+      }
+
+      // Výber v selecte
       const opt = document.createElement("option");
       opt.value = item.id;
-      opt.textContent = `${item.nazov} (Skladom: ${item.mnozstvo} ${item.jednotka || 'ks'})`;
+      opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
       select.appendChild(opt);
 
       // Riadok tabuľky
@@ -185,11 +192,12 @@
         <td><strong>${item.id}</strong></td>
         <td>${item.nazov}</td>
         <td>${item.kategoria || '-'}</td>
-        <td><span class="stock-badge ${badgeClass}">${item.mnozstvo} ${item.jednotka || 'ks'}</span></td>
+        <td><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
       `;
       tbody.appendChild(tr);
     });
   }
+
 
   // Odoslanie formulára výdaja
     document.getElementById("dispatchForm").addEventListener("submit", function(e) {
