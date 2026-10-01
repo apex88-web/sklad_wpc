@@ -5,20 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sklad WPC a Príslušenstva</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 900px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      background: #f4f6f8; 
+      margin: 0; 
+      padding: 20px; 
+    }
+    .container { 
+      max-width: 900px; 
+      margin: auto; 
+      background: #fff; 
+      padding: 25px; 
+      border-radius: 8px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06); 
+    }
     h1, h2 { color: #222; }
-    .card { background: #fafafa; border: 1px solid #e1e4e8; border-radius: 6px; padding: 18px; margin-bottom: 25px; }
+    .card { 
+      background: #fafafa; 
+      border: 1px solid #e1e4e8; 
+      border-radius: 6px; 
+      padding: 18px; 
+      margin-bottom: 25px; 
+    }
     .form-group { margin-bottom: 14px; }
-    label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
-    select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
-    button { background: #0066cc; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    label { 
+      display: block; 
+      font-weight: 600; 
+      margin-bottom: 5px; 
+      font-size: 14px; 
+    }
+    select, input { 
+      width: 100%; 
+      padding: 10px; 
+      border: 1px solid #ccc; 
+      border-radius: 4px; 
+      box-sizing: border-box; 
+      font-size: 15px; 
+    }
+    button { 
+      background: #0066cc; 
+      color: white; 
+      border: none; 
+      padding: 12px 20px; 
+      font-size: 15px; 
+      font-weight: 600; 
+      border-radius: 4px; 
+      cursor: pointer; 
+    }
     button:hover { background: #0052a3; }
     button:disabled { background: #999; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e1e4e8; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 15px; 
+    }
+    th, td { 
+      text-align: left; 
+      padding: 12px; 
+      border-bottom: 1px solid #e1e4e8; 
+    }
     th { background: #f0f2f5; font-size: 14px; }
-    .stock-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    .stock-badge { 
+      display: inline-block; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      font-weight: bold; 
+    }
     .stock-ok { background: #e6f4ea; color: #137333; }
     .stock-low { background: #fce8e6; color: #c5221f; }
   </style>
@@ -46,7 +98,7 @@
 
       <div class="form-group">
         <label for="note">Poznámka / Zákazka</label>
-        <input type="text" id="note" placeholder="Napr. Zákazka Žilina">
+        <input type="text" id="note" placeholder="Napr. Terasa Žilina">
       </div>
 
       <button type="submit" id="submitBtn">Potvrdiť výdaj zo skladu</button>
@@ -71,34 +123,42 @@
 </div>
 
 <script>
-  // Doplňte vašu presnú URL z Apps Script končiacu na /exec
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT_wDQWe9ZxYNRMhLvWziJX8yunTGIdJtcgYo6W8a6eJOnglkHmoCg-3IOPDLM501y/exec";
+  // SEM VLOŽTE VAŠU URL Z APPS SCRIPTU (končiacu na /exec)
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwQkyeMN-u1-CIfFJxdVnKHjwXkwzskcxv4h3QnWb-qXbkGDuxtLqPSdXbtyWYnyPa5/exec";
 
   let inventory = [];
 
-  async function loadStock() {
+  // Funkcia na načítanie dát cez JSONP (obchádza akékoľvek blokovanie CORS v prehliadači)
+  function loadStock() {
     const tbody = document.querySelector("#stockTable tbody");
-    tbody.innerHTML = '<tr><td colspan="4">Pripájam sa k databáze...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4">Pripájam sa k databáze Google Sheets...</td></tr>';
 
-    try {
-      const url = SCRIPT_URL + (SCRIPT_URL.includes("?") ? "&" : "?") + "t=" + Date.now();
-      const res = await fetch(url, {
-        method: "GET",
-        redirect: "follow"
-      });
-
-      if (!res.ok) {
-        throw new Error("HTTP kód chyby: " + res.status);
+    // Globálna funkcia, ktorú zavolá odpoveď z Apps Scriptu
+    window.onStockLoaded = function(data) {
+      if (Array.isArray(data)) {
+        inventory = data;
+        renderUI();
+      } else {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Chyba formátu dát z tabuľky.</td></tr>';
       }
+      const oldScript = document.getElementById("jsonp-script");
+      if (oldScript) oldScript.remove();
+    };
 
-      inventory = await res.json();
-      renderUI();
-    } catch (err) {
-      console.error(err);
-      tbody.innerHTML = `<tr><td colspan="4" style="color:red; font-weight:bold;">Chyba načítania: ${err.message}</td></tr>`;
-    }
+    const oldScript = document.getElementById("jsonp-script");
+    if (oldScript) oldScript.remove();
+
+    const script = document.createElement("script");
+    script.id = "jsonp-script";
+    const separator = SCRIPT_URL.includes("?") ? "&" : "?";
+    script.src = `${SCRIPT_URL}${separator}callback=onStockLoaded&t=${Date.now()}`;
+    script.onerror = function() {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:red; font-weight:bold;">Chyba: Skript neodpovedá. Uistite sa, že v Apps Script máte nasadenú novú verziu s parametrom callback a prístup je nastavený na "Ktokoľvek".</td></tr>';
+    };
+    document.body.appendChild(script);
   }
 
+  // Vykreslenie dát do rozbaľovacieho zoznamu a tabuľky
   function renderUI() {
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
@@ -107,16 +167,18 @@
     tbody.innerHTML = "";
 
     if (!inventory || inventory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4">V tabuľke nie sú žiadne položky.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">V tabuľke nie sú žiadne skladové položky.</td></tr>';
       return;
     }
 
     inventory.forEach(item => {
+      // Položka do výberu
       const opt = document.createElement("option");
       opt.value = item.id;
       opt.textContent = `${item.nazov} (Skladom: ${item.mnozstvo} ${item.jednotka || 'ks'})`;
       select.appendChild(opt);
 
+      // Riadok tabuľky
       const tr = document.createElement("tr");
       const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
       tr.innerHTML = `
@@ -129,13 +191,13 @@
     });
   }
 
+  // Odoslanie formulára výdaja
   document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
     btn.textContent = "Ukladám výdaj...";
 
-    // Tu je definovaný objekt payload
     const payload = {
       id: document.getElementById("itemSelect").value,
       mnozstvo: document.getElementById("amount").value,
@@ -143,21 +205,18 @@
     };
 
     try {
-      const res = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: "POST",
+        mode: "no-cors",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        redirect: "follow"
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
       });
-      const result = await res.json();
 
-      if (result.status === "success") {
-        alert("Výdaj bol úspešne zaevidovaný.");
-        document.getElementById("dispatchForm").reset();
-        await loadStock();
-      } else {
-        alert("Chyba tabuľky: " + (result.message || "Neznáma chyba"));
-      }
+      alert("Výdaj bol zaevidovaný.");
+      document.getElementById("dispatchForm").reset();
+      
+      // Počkáme sekundu a pol, kým Google Sheets zapíše zmenu, a obnovíme zásoby
+      setTimeout(loadStock, 1500);
     } catch (err) {
       alert("Chyba pri odosielaní: " + err.message);
     } finally {
@@ -166,7 +225,7 @@
     }
   });
 
-  // Štart načítania pri otvorení stránky
+  // Prvotné spustenie
   loadStock();
 </script>
 </body>
