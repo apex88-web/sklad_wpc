@@ -159,7 +159,7 @@
   }
 
   // Vykreslenie dát do rozbaľovacieho zoznamu a tabuľky
-  function renderUI() {
+    function renderUI() {
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
     
@@ -172,20 +172,32 @@
     }
 
     inventory.forEach(item => {
-      // Výpočet celkových metrov, ak má položka definovanú dĺžku
       let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
+
+      // Ak má položka definovanú dĺžku v metroch
       if (item.dlzka_m > 0) {
-        const celkovoMetrov = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
-        textZasoby += ` (${celkovoMetrov} bm)`;
+        const celkovoBm = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
+        
+        // Zistenie kategórie (ošetrené pre malé/veľké písmená: doska / dosky)
+        const kat = (item.kategoria || "").trim().toLowerCase();
+        
+        if (kat === "doska" || kat === "dosky") {
+          // Vzorec: plocha = dlzka v bm * 0.150
+          const plochaM2 = Math.round((celkovoBm * 0.150) * 100) / 100;
+          textZasoby += ` (${celkovoBm} bm | ${plochaM2} m²)`;
+        } else {
+          // Pre hranoly, alu profily a pod.
+          textZasoby += ` (${celkovoBm} bm)`;
+        }
       }
 
-      // Výber v selecte
+      // Možnosť vo výbere (select)
       const opt = document.createElement("option");
       opt.value = item.id;
       opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
       select.appendChild(opt);
 
-      // Riadok tabuľky
+      // Riadok v tabuľke
       const tr = document.createElement("tr");
       const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
       tr.innerHTML = `
