@@ -46,7 +46,7 @@
 
       <div class="form-group">
         <label for="note">Poznámka / Zákazka</label>
-        <input type="text" id="note" placeholder="Napr. Terasa Zákazník">
+        <input type="text" id="note" placeholder="Napr. Zákazka Žilina">
       </div>
 
       <button type="submit" id="submitBtn">Potvrdiť výdaj zo skladu</button>
@@ -71,29 +71,31 @@
 </div>
 
 <script>
-  // URL z Google Apps Scriptu doplníme neskôr
+  // Doplňte vašu presnú URL z Apps Script končiacu na /exec
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT_wDQWe9ZxYNRMhLvWziJX8yunTGIdJtcgYo6W8a6eJOnglkHmoCg-3IOPDLM501y/exec";
 
   let inventory = [];
 
-async function loadStock() {
-    if (SCRIPT_URL.includes("SEM_VLOZTE")) {
-      document.querySelector("#stockTable tbody").innerHTML = 
-        '<tr><td colspan="4" style="color:orange;">Ešte nie je nastavená URL adresa prepojenia na Google tabuľku.</td></tr>';
-      return;
-    }
+  async function loadStock() {
+    const tbody = document.querySelector("#stockTable tbody");
+    tbody.innerHTML = '<tr><td colspan="4">Pripájam sa k databáze...</td></tr>';
+
     try {
-            const res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(payload),
+      const url = SCRIPT_URL + (SCRIPT_URL.includes("?") ? "&" : "?") + "t=" + Date.now();
+      const res = await fetch(url, {
+        method: "GET",
         redirect: "follow"
       });
+
+      if (!res.ok) {
+        throw new Error("HTTP kód chyby: " + res.status);
+      }
 
       inventory = await res.json();
       renderUI();
     } catch (err) {
-      console.error("Chyba načítania:", err);
-      alert("Nepodarilo sa načítať skladové zásoby: " + err.message);
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="4" style="color:red; font-weight:bold;">Chyba načítania: ${err.message}</td></tr>`;
     }
   }
 
@@ -104,10 +106,15 @@ async function loadStock() {
     const tbody = document.querySelector("#stockTable tbody");
     tbody.innerHTML = "";
 
+    if (!inventory || inventory.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4">V tabuľke nie sú žiadne položky.</td></tr>';
+      return;
+    }
+
     inventory.forEach(item => {
       const opt = document.createElement("option");
       opt.value = item.id;
-      opt.textContent = `${item.nazov} (Skladom: ${item.mnozstvo} ${item.jednotka})`;
+      opt.textContent = `${item.nazov} (Skladom: ${item.mnozstvo} ${item.jednotka || 'ks'})`;
       select.appendChild(opt);
 
       const tr = document.createElement("tr");
@@ -115,8 +122,8 @@ async function loadStock() {
       tr.innerHTML = `
         <td><strong>${item.id}</strong></td>
         <td>${item.nazov}</td>
-        <td>${item.kategoria}</td>
-        <td><span class="stock-badge ${badgeClass}">${item.mnozstvo} ${item.jednotka}</span></td>
+        <td>${item.kategoria || '-'}</td>
+        <td><span class="stock-badge ${badgeClass}">${item.mnozstvo} ${item.jednotka || 'ks'}</span></td>
       `;
       tbody.appendChild(tr);
     });
@@ -124,14 +131,11 @@ async function loadStock() {
 
   document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (SCRIPT_URL.includes("SEM_VLOZTE")) {
-      alert("Najskôr vložte URL adresu skriptu z Google Tabuľky.");
-      return;
-    }
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
     btn.textContent = "Ukladám výdaj...";
 
+    // Tu je definovaný objekt payload
     const payload = {
       id: document.getElementById("itemSelect").value,
       mnozstvo: document.getElementById("amount").value,
@@ -141,7 +145,9 @@ async function loadStock() {
     try {
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        redirect: "follow"
       });
       const result = await res.json();
 
@@ -150,18 +156,19 @@ async function loadStock() {
         document.getElementById("dispatchForm").reset();
         await loadStock();
       } else {
-        alert("Chyba: " + result.message);
+        alert("Chyba tabuľky: " + (result.message || "Neznáma chyba"));
       }
     } catch (err) {
-      console.error(err);
-      alert("Požiadavku sa nepodarilo odoslať.");
+      alert("Chyba pri odosielaní: " + err.message);
     } finally {
       btn.disabled = false;
       btn.textContent = "Potvrdiť výdaj zo skladu";
     }
   });
 
+  // Štart načítania pri otvorení stránky
   loadStock();
 </script>
 </body>
 </html>
+
