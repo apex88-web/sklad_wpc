@@ -108,19 +108,17 @@
     <!-- Tabuľka aktuálnych zásob s časovou pečiatkou -->
   <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 14px; font-weight: normal; color: #666; margin-left: 10px;"></span></h2>
 
-  <table id="stockTable">
+ <table id="stockTable">
     <thead>
       <tr>
-        <th>Kód</th>
         <th>Názov</th>
-        <th>Kategória</th>
         <th>Zásoba</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="4">Načítavam dáta...</td></tr>
+      <tr><td colspan="2">Načítavam dáta...</td></tr>
     </tbody>
-  </table>
+  </table
 </div>
 
 <script>
@@ -159,7 +157,7 @@
     document.body.appendChild(script);
   }
 
-       function renderUI() {
+        function renderUI() {
     // Aktualizácia dátumu a času
     const now = new Date();
     const formattedTime = now.toLocaleDateString('sk-SK') + ', ' + now.toLocaleTimeString('sk-SK');
@@ -167,7 +165,7 @@
     if (updateEl) {
       updateEl.textContent = `(k ${formattedTime})`;
     }
-    
+
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
     
@@ -175,48 +173,43 @@
     tbody.innerHTML = "";
 
     if (!inventory || inventory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4">V tabuľke nie sú žiadne skladové položky.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="2">V tabuľke nie sú žiadne skladové položky.</td></tr>';
       return;
     }
 
     inventory.forEach(item => {
       let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
 
-      // Ak má položka definovanú dĺžku v metroch
+      // Prepočet bežných metrov a plochy v m2
       if (item.dlzka_m > 0) {
         const celkovoBm = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
-        
-        // Zistenie kategórie (ošetrené pre malé/veľké písmená: doska / dosky)
         const kat = (item.kategoria || "").trim().toLowerCase();
         
         if (kat === "doska" || kat === "dosky") {
-          // Vzorec: plocha = dlzka v bm * 0.150
           const plochaM2 = Math.round((celkovoBm * 0.150) * 100) / 100;
           textZasoby += ` (${celkovoBm} bm | ${plochaM2} m²)`;
         } else {
-          // Pre hranoly, alu profily a pod.
           textZasoby += ` (${celkovoBm} bm)`;
         }
       }
 
-      // Možnosť vo výbere (select)
+      // Možnosť vo formulári na výber položky
       const opt = document.createElement("option");
       opt.value = item.id;
       opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
       select.appendChild(opt);
 
-      // Riadok v tabuľke
+      // Riadok v tabuľke zásob (iba Názov a Zásoba)
       const tr = document.createElement("tr");
       const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
       tr.innerHTML = `
-        <td><strong>${item.id}</strong></td>
-        <td>${item.nazov}</td>
-        <td>${item.kategoria || '-'}</td>
+        <td><strong>${item.nazov}</strong></td>
         <td><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
       `;
       tbody.appendChild(tr);
     });
   }
+
 
 
   // Odoslanie formulára výdaja
