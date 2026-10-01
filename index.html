@@ -124,7 +124,7 @@
 
 <script>
   // SEM VLOŽTE VAŠU URL Z APPS SCRIPTU (končiacu na /exec)
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwO-iv6BrTwnGBr72ep-fKVUPwAoVA7d0xuBvMzaWIqL7mqJN-R8POMvkh_wb736Wrg/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyD-d_0O2nRQ8eNEttd3jPdcGvehdFdgYH7Qhn2S4erf2tTgQftftKd6qUEVn_nj-OY/exec";
 
   let inventory = [];
 
@@ -192,41 +192,60 @@
   }
 
   // Odoslanie formulára výdaja
-   document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
+    document.getElementById("dispatchForm").addEventListener("submit", function(e) {
     e.preventDefault();
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
-    btn.textContent = "Ukladám výdaj...";
+    btn.textContent = "Odosielam výdaj do tabuľky...";
 
     const itemId = document.getElementById("itemSelect").value;
     const amountVal = document.getElementById("amount").value;
     const noteVal = document.getElementById("note").value;
 
-    // Použijeme URLSearchParams, ktoré Google Apps Script spracuje vždy a bezpečne
-    const params = new URLSearchParams();
-    params.append("id", itemId);
-    params.append("mnozstvo", amountVal);
-    params.append("poznamka", noteVal);
-
-    try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",
-        body: params
-      });
-
-      alert("Výdaj bol odoslaný. Zásoby sa aktualizujú.");
-      document.getElementById("dispatchForm").reset();
-      
-      // Počkáme 2 sekundy, aby Google Sheets dokončil zápis a načítame nový stav
-      setTimeout(loadStock, 2000);
-    } catch (err) {
-      alert("Chyba spojenia pri odosielaní: " + err.message);
-    } finally {
+    // Globálna funkcia, ktorá prevezme odpoveď z Apps Scriptu
+    window.onDispatchComplete = function(res) {
       btn.disabled = false;
       btn.textContent = "Potvrdiť výdaj zo skladu";
-    }
+
+      if (res && res.status === "success") {
+        alert("Výdaj úspešne zapísaný! Nový zostatok položky " + res.nazov + " je: " + res.novaZasoba);
+        document.getElementById("dispatchForm").reset();
+        loadStock(); // Ihneď znova načíta čerstvé zásoby
+      } else {
+        alert("Chyba z tabuľky: " + (res.message || "Neznáma chyba"));
+      }
+
+      const el = document.getElementById("jsonp-dispatch");
+      if (el) el.remove();
+    };
+
+    const oldEl = document.getElementById("jsonp-dispatch");
+    if (oldEl) oldEl.remove();
+
+    const script = document.createElement("script");
+    script.id = "jsonp-dispatch";
+    const sep = SCRIPT_URL.includes("?") ? "&" : "?";
+    
+    // Zostavenie požiadavky s parametrami priamo v URL
+    const query = [
+      "akcia=vydaj",
+      "id=" + encodeURIComponent(itemId),
+      "mnozstvo=" + encodeURIComponent(amountVal),
+      "poznamka=" + encodeURIComponent(noteVal),
+      "callback=onDispatchComplete",
+      "t=" + Date.now()
+    ].join("&");
+
+    script.src = SCRIPT_URL + sep + query;
+    script.onerror = function() {
+      btn.disabled = false;
+      btn.textContent = "Potvrdiť výdaj zo skladu";
+      alert("Nepodarilo sa spojiť so skriptom.");
+    };
+
+    document.body.appendChild(script);
   });
+
 
 
   // Prvotné spustenie
