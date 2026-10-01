@@ -124,7 +124,7 @@
 
 <script>
   // SEM VLOŽTE VAŠU URL Z APPS SCRIPTU (končiacu na /exec)
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOqCwHAsCYn1xvK5YO7ISDuEquun8vPscD0d252Oad2ZLmK9nDNYVAczFh5V9LflY/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwO-iv6BrTwnGBr72ep-fKVUPwAoVA7d0xuBvMzaWIqL7mqJN-R8POMvkh_wb736Wrg/exec";
 
   let inventory = [];
 
@@ -192,38 +192,42 @@
   }
 
   // Odoslanie formulára výdaja
-  document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
+   document.getElementById("dispatchForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
     btn.textContent = "Ukladám výdaj...";
 
-    const payload = {
-      id: document.getElementById("itemSelect").value,
-      mnozstvo: document.getElementById("amount").value,
-      poznamka: document.getElementById("note").value
-    };
+    const itemId = document.getElementById("itemSelect").value;
+    const amountVal = document.getElementById("amount").value;
+    const noteVal = document.getElementById("note").value;
+
+    // Použijeme URLSearchParams, ktoré Google Apps Script spracuje vždy a bezpečne
+    const params = new URLSearchParams();
+    params.append("id", itemId);
+    params.append("mnozstvo", amountVal);
+    params.append("poznamka", noteVal);
 
     try {
       await fetch(SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
+        body: params
       });
 
-      alert("Výdaj bol zaevidovaný.");
+      alert("Výdaj bol odoslaný. Zásoby sa aktualizujú.");
       document.getElementById("dispatchForm").reset();
       
-      // Počkáme sekundu a pol, kým Google Sheets zapíše zmenu, a obnovíme zásoby
-      setTimeout(loadStock, 1500);
+      // Počkáme 2 sekundy, aby Google Sheets dokončil zápis a načítame nový stav
+      setTimeout(loadStock, 2000);
     } catch (err) {
-      alert("Chyba pri odosielaní: " + err.message);
+      alert("Chyba spojenia pri odosielaní: " + err.message);
     } finally {
       btn.disabled = false;
       btn.textContent = "Potvrdiť výdaj zo skladu";
     }
   });
+
 
   // Prvotné spustenie
   loadStock();
