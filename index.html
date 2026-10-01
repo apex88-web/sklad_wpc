@@ -105,8 +105,9 @@
     </form>
   </div>
 
-  <!-- Tabuľka aktuálnych zásob -->
-  <h2>Aktuálny stav skladu</h2>
+    <!-- Tabuľka aktuálnych zásob s časovou pečiatkou -->
+  <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 14px; font-weight: normal; color: #666; margin-left: 10px;"></span></h2>
+
   <table id="stockTable">
     <thead>
       <tr>
@@ -158,8 +159,16 @@
     document.body.appendChild(script);
   }
 
-  // Vykreslenie dát do rozbaľovacieho zoznamu a tabuľky
-    function renderUI() {
+       function renderUI() {
+    // Aktualizácia dátumu a času
+    const now = new Date();
+    const formattedTime = now.toLocaleDateString('sk-SK') + ', ' + now.toLocaleTimeString('sk-SK');
+    const updateEl = document.getElementById("lastUpdated");
+    if (updateEl) {
+      updateEl.textContent = `(k ${formattedTime})`;
+    }
+    
+    {
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
     
