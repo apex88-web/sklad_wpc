@@ -9,162 +9,251 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       background: #f4f6f8; 
       margin: 0; 
-      padding: 20px; 
+      padding: 15px; 
     }
     .container { 
-      max-width: 900px; 
+      max-width: 800px; 
       margin: auto; 
       background: #fff; 
-      padding: 25px; 
+      padding: 20px; 
       border-radius: 8px; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.06); 
     }
-    h1, h2 { color: #222; }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    h1 { font-size: 22px; color: #222; margin: 0; }
+    h2 { font-size: 18px; color: #333; margin-top: 0; }
     .card { 
       background: #fafafa; 
       border: 1px solid #e1e4e8; 
       border-radius: 6px; 
-      padding: 18px; 
-      margin-bottom: 25px; 
+      padding: 16px; 
+      margin-bottom: 20px; 
     }
     .form-group { margin-bottom: 14px; }
-    label { 
-      display: block; 
-      font-weight: 600; 
-      margin-bottom: 5px; 
-      font-size: 14px; 
-    }
+    label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 14px; }
     select, input { 
       width: 100%; 
-      padding: 10px; 
+      padding: 12px; 
       border: 1px solid #ccc; 
       border-radius: 4px; 
       box-sizing: border-box; 
-      font-size: 15px; 
+      font-size: 16px; 
     }
     button { 
       background: #0066cc; 
       color: white; 
       border: none; 
       padding: 12px 20px; 
-      font-size: 15px; 
+      font-size: 16px; 
       font-weight: 600; 
       border-radius: 4px; 
       cursor: pointer; 
+      width: 100%;
     }
     button:hover { background: #0052a3; }
     button:disabled { background: #999; }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin-top: 15px; 
+    .btn-logout {
+      background: transparent;
+      color: #888;
+      border: 1px solid #ddd;
+      padding: 6px 12px;
+      font-size: 13px;
+      width: auto;
+      border-radius: 4px;
     }
-    th, td { 
-      text-align: left; 
-      padding: 12px; 
-      border-bottom: 1px solid #e1e4e8; 
-    }
-    th { background: #f0f2f5; font-size: 14px; }
+    .btn-logout:hover { background: #fee; color: #c00; border-color: #fcc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e1e4e8; font-size: 15px; }
+    th { background: #f0f2f5; }
     .stock-badge { 
       display: inline-block; 
       padding: 4px 8px; 
       border-radius: 4px; 
       font-weight: bold; 
+      font-size: 14px;
     }
     .stock-ok { background: #e6f4ea; color: #137333; }
     .stock-low { background: #fce8e6; color: #c5221f; }
+    
+    /* Sekcia prihlásenia PINom */
+    #loginSection {
+      max-width: 360px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    #pinInput {
+      text-align: center;
+      letter-spacing: 6px;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Skladová evidencia materiálu</h1>
 
-  <!-- Formulár pre výdaj -->
-  <div class="card">
-    <h2>Vyskladnenie materiálu</h2>
-    <form id="dispatchForm">
-      <div class="form-group">
-        <label for="itemSelect">Položka</label>
-        <select id="itemSelect" required>
-          <option value="">Načítavam skladové položky...</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="amount">Množstvo na výdaj</label>
-        <input type="number" id="amount" min="1" step="any" placeholder="Zadajte počet" required>
-      </div>
-
-      <div class="form-group">
-        <label for="note">Poznámka / Zákazka</label>
-        <input type="text" id="note" placeholder="Napr. Terasa Žilina">
-      </div>
-
-      <button type="submit" id="submitBtn">Potvrdiť výdaj zo skladu</button>
+  <!-- 1. OBRAZOVKA PRIHLÁSENIA S PINOM -->
+  <div id="loginSection" class="card">
+    <h2>Prístup do skladu</h2>
+    <p style="color:#666; font-size:14px;">Zadajte overovací PIN kód</p>
+    <form id="pinForm">
+      <input type="password" id="pinInput" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="••••" required autofocus>
+      <button type="submit" id="pinBtn">Odomknúť sklad</button>
+      <div id="pinError" style="color:red; font-size:14px; margin-top:10px; display:none;"></div>
     </form>
   </div>
 
-    <!-- Tabuľka aktuálnych zásob s časovou pečiatkou -->
-  <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 14px; font-weight: normal; color: #666; margin-left: 10px;"></span></h2>
+  <!-- 2. HLAVNÁ APLIKÁCIA SKLADU (pred odomknutím skrytá) -->
+  <div id="appSection" style="display: none;">
+    <div class="header-bar">
+      <h1>Skladová evidencia</h1>
+      <button class="btn-logout" onclick="logout()">Zamknúť 🔒</button>
+    </div>
 
- <table id="stockTable">
-    <thead>
-      <tr>
-        <th>Názov</th>
-        <th>Zásoba</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="2">Načítavam dáta...</td></tr>
-    </tbody>
-  </table
+    <!-- Formulár pre výdaj -->
+    <div class="card">
+      <h2>Vyskladnenie materiálu</h2>
+      <form id="dispatchForm">
+        <div class="form-group">
+          <label for="itemSelect">Položka</label>
+          <select id="itemSelect" required>
+            <option value="">Načítavam skladové položky...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Množstvo na výdaj</label>
+          <input type="number" id="amount" min="1" step="any" placeholder="Zadajte počet kusov" required>
+        </div>
+
+        <div class="form-group">
+          <label for="note">Poznámka / Zákazka</label>
+          <input type="text" id="note" placeholder="Napr. Terasa Žilina">
+        </div>
+
+        <button type="submit" id="submitBtn">Potvrdiť výdaj zo skladu</button>
+      </form>
+    </div>
+
+    <!-- Tabuľka zásob -->
+    <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 13px; font-weight: normal; color: #666; margin-left: 8px;"></span></h2>
+    <table id="stockTable">
+      <thead>
+        <tr>
+          <th>Názov</th>
+          <th>Zásoba</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="2">Načítavam dáta...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
 
 <script>
-  // SEM VLOŽTE VAŠU URL Z APPS SCRIPTU (končiacu na /exec)
+  // Doplňte vašu overenú URL adresu z Apps Scriptu končiacu na /exec
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzGD1Uj0GPx_Hkfc0HrgqvPr5ytp0py8Gdfk7Tk4UE5nQCiu-jyk1c5Wm6s2tfyh0_J/exec";
 
   let inventory = [];
+  let currentPin = localStorage.getItem("sklad_pin") || "";
 
-  // Funkcia na načítanie dát cez JSONP (obchádza akékoľvek blokovanie CORS v prehliadači)
+  // Kontrola pri načítaní stránky
+  window.addEventListener("DOMContentLoaded", () => {
+    if (currentPin) {
+      unlockAppAndLoad();
+    } else {
+      showLogin();
+    }
+  });
+
+  function showLogin(errMsg = "") {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("appSection").style.display = "none";
+    const errEl = document.getElementById("pinError");
+    if (errMsg) {
+      errEl.textContent = errMsg;
+      errEl.style.display = "block";
+    } else {
+      errEl.style.display = "none";
+    }
+    document.getElementById("pinInput").value = "";
+  }
+
+  function unlockAppAndLoad() {
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("appSection").style.display = "block";
+    loadStock();
+  }
+
+  function logout() {
+    localStorage.removeItem("sklad_pin");
+    currentPin = "";
+    showLogin("Sklad bol uzamknutý.");
+  }
+
+  // Odoslanie PINu
+  document.getElementById("pinForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const pinVal = document.getElementById("pinInput").value.trim();
+    if (!pinVal) return;
+    currentPin = pinVal;
+    unlockAppAndLoad();
+  });
+
+  // Načítanie zásob cez JSONP vrátane overenia PINu
   function loadStock() {
     const tbody = document.querySelector("#stockTable tbody");
-    tbody.innerHTML = '<tr><td colspan="4">Pripájam sa k databáze Google Sheets...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem zásoby...</td></tr>';
 
-    // Globálna funkcia, ktorú zavolá odpoveď z Apps Scriptu
-    window.onStockLoaded = function(data) {
-      if (Array.isArray(data)) {
-        inventory = data;
+    window.onStockLoaded = function(res) {
+      if (res && res.status === "auth_error") {
+        localStorage.removeItem("sklad_pin");
+        currentPin = "";
+        showLogin("Nesprávny prístupový PIN kód.");
+        return;
+      }
+
+      if (res && res.status === "success" && Array.isArray(res.data)) {
+        // PIN bol správny, zapamätáme ho v telefóne
+        localStorage.setItem("sklad_pin", currentPin);
+        inventory = res.data;
         renderUI();
       } else {
-        tbody.innerHTML = '<tr><td colspan="4" style="color:red;">Chyba formátu dát z tabuľky.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="2" style="color:red;">Chyba spracovania dát.</td></tr>';
       }
-      const oldScript = document.getElementById("jsonp-script");
+
+      const oldScript = document.getElementById("jsonp-stock");
       if (oldScript) oldScript.remove();
     };
 
-    const oldScript = document.getElementById("jsonp-script");
+    const oldScript = document.getElementById("jsonp-stock");
     if (oldScript) oldScript.remove();
 
     const script = document.createElement("script");
-    script.id = "jsonp-script";
-    const separator = SCRIPT_URL.includes("?") ? "&" : "?";
-    script.src = `${SCRIPT_URL}${separator}callback=onStockLoaded&t=${Date.now()}`;
+    script.id = "jsonp-stock";
+    const sep = SCRIPT_URL.includes("?") ? "&" : "?";
+    script.src = `${SCRIPT_URL}${sep}akcia=nacitaj&pin=${encodeURIComponent(currentPin)}&callback=onStockLoaded&t=${Date.now()}`;
     script.onerror = function() {
-      tbody.innerHTML = '<tr><td colspan="4" style="color:red; font-weight:bold;">Chyba: Skript neodpovedá. Uistite sa, že v Apps Script máte nasadenú novú verziu s parametrom callback a prístup je nastavený na "Ktokoľvek".</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="2" style="color:red; font-weight:bold;">Chyba spojenia so serverom.</td></tr>';
     };
     document.body.appendChild(script);
   }
 
-        function renderUI() {
-    // Aktualizácia dátumu a času
+  function renderUI() {
     const now = new Date();
     const formattedTime = now.toLocaleDateString('sk-SK') + ', ' + now.toLocaleTimeString('sk-SK');
     const updateEl = document.getElementById("lastUpdated");
-    if (updateEl) {
-      updateEl.textContent = `(k ${formattedTime})`;
-    }
+    if (updateEl) updateEl.textContent = `(k ${formattedTime})`;
 
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
@@ -180,7 +269,6 @@
     inventory.forEach(item => {
       let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
 
-      // Prepočet bežných metrov a plochy v m2
       if (item.dlzka_m > 0) {
         const celkovoBm = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
         const kat = (item.kategoria || "").trim().toLowerCase();
@@ -193,13 +281,11 @@
         }
       }
 
-      // Možnosť vo formulári na výber položky
       const opt = document.createElement("option");
       opt.value = item.id;
       opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
       select.appendChild(opt);
 
-      // Riadok v tabuľke zásob (iba Názov a Zásoba)
       const tr = document.createElement("tr");
       const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
       tr.innerHTML = `
@@ -210,30 +296,32 @@
     });
   }
 
-
-
-  // Odoslanie formulára výdaja
-    document.getElementById("dispatchForm").addEventListener("submit", function(e) {
+  // Spracovanie výdaja
+  document.getElementById("dispatchForm").addEventListener("submit", function(e) {
     e.preventDefault();
     const btn = document.getElementById("submitBtn");
     btn.disabled = true;
-    btn.textContent = "Odosielam výdaj do tabuľky...";
+    btn.textContent = "Odosielam výdaj...";
 
     const itemId = document.getElementById("itemSelect").value;
     const amountVal = document.getElementById("amount").value;
     const noteVal = document.getElementById("note").value;
 
-    // Globálna funkcia, ktorá prevezme odpoveď z Apps Scriptu
     window.onDispatchComplete = function(res) {
       btn.disabled = false;
       btn.textContent = "Potvrdiť výdaj zo skladu";
 
+      if (res && res.status === "auth_error") {
+        logout();
+        return;
+      }
+
       if (res && res.status === "success") {
-        alert("Výdaj úspešne zapísaný! Nový zostatok položky " + res.nazov + " je: " + res.novaZasoba);
+        alert("Výdaj zapísaný! Nový stav položky " + res.nazov + ": " + res.novaZasoba);
         document.getElementById("dispatchForm").reset();
-        loadStock(); // Ihneď znova načíta čerstvé zásoby
+        loadStock();
       } else {
-        alert("Chyba z tabuľky: " + (res.message || "Neznáma chyba"));
+        alert("Chyba: " + (res.message || "Neznáma chyba"));
       }
 
       const el = document.getElementById("jsonp-dispatch");
@@ -247,9 +335,9 @@
     script.id = "jsonp-dispatch";
     const sep = SCRIPT_URL.includes("?") ? "&" : "?";
     
-    // Zostavenie požiadavky s parametrami priamo v URL
     const query = [
       "akcia=vydaj",
+      "pin=" + encodeURIComponent(currentPin),
       "id=" + encodeURIComponent(itemId),
       "mnozstvo=" + encodeURIComponent(amountVal),
       "poznamka=" + encodeURIComponent(noteVal),
@@ -266,12 +354,6 @@
 
     document.body.appendChild(script);
   });
-
-
-
-  // Prvotné spustenie
-  loadStock();
 </script>
 </body>
 </html>
-
