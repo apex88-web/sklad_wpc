@@ -198,6 +198,11 @@
   function logout() {
     localStorage.removeItem("sklad_pin");
     currentPin = "";
+    inventory = []; // Vyčistí načítané zásoby z pamäte stránky
+    const select = document.getElementById("itemSelect");
+    if (select) select.innerHTML = '<option value="">Načítavam skladové položky...</option>';
+    const tbody = document.querySelector("#stockTable tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="2">Načítavam dáta...</td></tr>';
     showLogin("Sklad bol uzamknutý.");
   }
 
@@ -211,11 +216,26 @@
   });
 
   // Načítanie zásob cez JSONP vrátane overenia PINu
+  // Načítanie zásob cez JSONP s čistým prepisom
   function loadStock() {
     const tbody = document.querySelector("#stockTable tbody");
     tbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem zásoby...</td></tr>';
 
-    window.onStockLoaded = function(res) {
+    // 1. Dôkladné odstránenie starého script tagu, ak existuje
+    const existingScript = document.getElementById("jsonp-stock");
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    // 2. Unikátny názov funkcie pre každé volanie, aby nevznikal konflikt v pamäti
+    const callbackName = "onStockLoaded_" + Date.now();
+
+    window[callbackName] = function(res) {
+      // Upratanie po úspešnom volaní
+      delete window[callbackName];
+      const s = document.getElementById("jsonp-stock");
+      if (s) s.remove();
+
       if (res && res.status === "auth_error") {
         localStorage.removeItem("sklad_pin");
         currentPin = "";
@@ -224,28 +244,28 @@
       }
 
       if (res && res.status === "success" && Array.isArray(res.data)) {
-        // PIN bol správny, zapamätáme ho v telefóne
         localStorage.setItem("sklad_pin", currentPin);
         inventory = res.data;
         renderUI();
       } else {
         tbody.innerHTML = '<tr><td colspan="2" style="color:red;">Chyba spracovania dát.</td></tr>';
       }
-
-      const oldScript = document.getElementById("jsonp-stock");
-      if (oldScript) oldScript.remove();
     };
 
-    const oldScript = document.getElementById("jsonp-stock");
-    if (oldScript) oldScript.remove();
-
+    // 3. Vytvorenie a pripojenie nového script elementu
     const script = document.createElement("script");
     script.id = "jsonp-stock";
     const sep = SCRIPT_URL.includes("?") ? "&" : "?";
-    script.src = `${SCRIPT_URL}${sep}akcia=nacitaj&pin=${encodeURIComponent(currentPin)}&callback=onStockLoaded&t=${Date.now()}`;
+    
+    // Parameter t zabezpečí, že prehliadač nikdy nepoužije starú medzipamäť
+    script.src = `${SCRIPT_URL}${sep}akcia=nacitaj&pin=${encodeURIComponent(currentPin)}&callback=${callbackName}&t=${Date.now()}`;
+    
     script.onerror = function() {
+      delete window[callbackName];
+      script.remove();
       tbody.innerHTML = '<tr><td colspan="2" style="color:red; font-weight:bold;">Chyba spojenia so serverom.</td></tr>';
     };
+
     document.body.appendChild(script);
   }
 
