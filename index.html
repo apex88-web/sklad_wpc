@@ -94,6 +94,15 @@
       font-size: 24px;
       margin-bottom: 15px;
     }
+    .dispatch-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 14px;
+      background: #eef2f6;
+      color: #334155;
+    }
   </style>
 </head>
 <body>
@@ -143,22 +152,35 @@
       </form>
     </div>
 
-    <!-- Tabuľka zásob -->
+ <!-- 1. TABUĽKA: AKTUÁLNY STAV SKLADU -->
     <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 13px; font-weight: normal; color: #666; margin-left: 8px;"></span></h2>
     <table id="stockTable">
       <thead>
         <tr>
           <th>Názov</th>
-          <th>Zásoba</th>
+          <th>Skladom</th>
         </tr>
       </thead>
       <tbody>
         <tr><td colspan="2">Načítavam dáta...</td></tr>
       </tbody>
     </table>
-  </div>
 
-</div>
+    <div style="height: 30px;"></div>
+
+    <!-- 2. TABUĽKA: CELKOVO VYDANÉ ZO SKLADU -->
+    <h2>Celkovo vydané zo skladu</h2>
+    <table id="dispatchedTable">
+      <thead>
+        <tr>
+          <th>Názov</th>
+          <th>Vydané</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="2">Načítavam dáta...</td></tr>
+      </tbody>
+    </table>
 
 <script>
   // Doplňte vašu overenú URL adresu z Apps Scriptu končiacu na /exec
@@ -269,7 +291,7 @@
     document.body.appendChild(script);
   }
 
-  function renderUI() {
+function renderUI() {
     const now = new Date();
     const formattedTime = now.toLocaleDateString('sk-SK') + ', ' + now.toLocaleTimeString('sk-SK');
     const updateEl = document.getElementById("lastUpdated");
@@ -278,102 +300,62 @@
     const select = document.getElementById("itemSelect");
     select.innerHTML = '<option value="">-- Vyberte položku --</option>';
     
-    const tbody = document.querySelector("#stockTable tbody");
-    tbody.innerHTML = "";
+    const stockTbody = document.querySelector("#stockTable tbody");
+    const dispatchTbody = document.querySelector("#dispatchedTable tbody");
+    
+    stockTbody.innerHTML = "";
+    dispatchTbody.innerHTML = "";
 
     if (!inventory || inventory.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="2">V tabuľke nie sú žiadne skladové položky.</td></tr>';
+      stockTbody.innerHTML = '<tr><td colspan="2">V tabuľke nie sú žiadne skladové položky.</td></tr>';
+      dispatchTbody.innerHTML = '<tr><td colspan="2">Žiadne záznamy.</td></tr>';
       return;
     }
 
     inventory.forEach(item => {
       let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
+      let textVydane = `${item.vydane || 0} ${item.jednotka || 'ks'}`;
 
       if (item.dlzka_m > 0) {
         const celkovoBm = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
+        const vydaneBm = Math.round(((item.vydane || 0) * item.dlzka_m) * 100) / 100;
         const kat = (item.kategoria || "").trim().toLowerCase();
         
         if (kat === "doska" || kat === "dosky") {
           const plochaM2 = Math.round((celkovoBm * 0.150) * 100) / 100;
+          const vydaneM2 = Math.round((vydaneBm * 0.150) * 100) / 100;
           textZasoby += ` (${celkovoBm} bm | ${plochaM2} m²)`;
+          textVydane += ` (${vydaneBm} bm | ${vydaneM2} m²)`;
         } else {
           textZasoby += ` (${celkovoBm} bm)`;
+          textVydane += ` (${vydaneBm} bm)`;
         }
       }
 
+      // 1. Výberové pole pre výdaj
       const opt = document.createElement("option");
       opt.value = item.id;
       opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
       select.appendChild(opt);
 
-      const tr = document.createElement("tr");
+      // 2. Riadok v tabuľke zásob
+      const trStock = document.createElement("tr");
       const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
-      tr.innerHTML = `
+      trStock.innerHTML = `
         <td><strong>${item.nazov}</strong></td>
         <td><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
       `;
-      tbody.appendChild(tr);
+      stockTbody.appendChild(trStock);
+
+      // 3. Riadok v tabuľke vydaného materiálu
+      const trDispatch = document.createElement("tr");
+      trDispatch.innerHTML = `
+        <td><strong>${item.nazov}</strong></td>
+        <td><span class="dispatch-badge">${textVydane}</span></td>
+      `;
+      dispatchTbody.appendChild(trDispatch);
     });
   }
-
-  // Spracovanie výdaja
-  document.getElementById("dispatchForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    const btn = document.getElementById("submitBtn");
-    btn.disabled = true;
-    btn.textContent = "Odosielam výdaj...";
-
-    const itemId = document.getElementById("itemSelect").value;
-    const amountVal = document.getElementById("amount").value;
-    const noteVal = document.getElementById("note").value;
-
-    window.onDispatchComplete = function(res) {
-      btn.disabled = false;
-      btn.textContent = "Potvrdiť výdaj zo skladu";
-
-      if (res && res.status === "auth_error") {
-        logout();
-        return;
-      }
-
-      if (res && res.status === "success") {
-        alert("Výdaj zapísaný! Nový stav položky " + res.nazov + ": " + res.novaZasoba);
-        document.getElementById("dispatchForm").reset();
-        loadStock();
-      } else {
-        alert("Chyba: " + (res.message || "Neznáma chyba"));
-      }
-
-      const el = document.getElementById("jsonp-dispatch");
-      if (el) el.remove();
-    };
-
-    const oldEl = document.getElementById("jsonp-dispatch");
-    if (oldEl) oldEl.remove();
-
-    const script = document.createElement("script");
-    script.id = "jsonp-dispatch";
-    const sep = SCRIPT_URL.includes("?") ? "&" : "?";
-    
-    const query = [
-      "akcia=vydaj",
-      "pin=" + encodeURIComponent(currentPin),
-      "id=" + encodeURIComponent(itemId),
-      "mnozstvo=" + encodeURIComponent(amountVal),
-      "poznamka=" + encodeURIComponent(noteVal),
-      "callback=onDispatchComplete",
-      "t=" + Date.now()
-    ].join("&");
-
-    script.src = SCRIPT_URL + sep + query;
-    script.onerror = function() {
-      btn.disabled = false;
-      btn.textContent = "Potvrdiť výdaj zo skladu";
-      alert("Nepodarilo sa spojiť so skriptom.");
-    };
-
-    document.body.appendChild(script);
-  });
 </script>
 </body>
 </html>
