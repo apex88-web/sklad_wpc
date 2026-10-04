@@ -118,6 +118,33 @@
       color: #dc2626;
       border: 1px solid #fecaca;
     }
+    /* Obal pre pruhový graf v riadku */
+    .bar-container {
+      width: 100%;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      height: 7px;
+      display: flex;
+      margin-top: 6px;
+    }
+    .bar-stock {
+      background: #16a34a; /* Zelená - skladom */
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .bar-dispatched {
+      background: #dc2626; /* Červená - vydané */
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .item-meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
   </style>
 </head>
 <body>
@@ -339,9 +366,18 @@ function renderUI() {
     inventory.forEach(item => {
       const mnozstvo = Number(item.mnozstvo) || 0;
       const vydane = Number(item.vydane) || 0;
-      let dlzka = parseFloat(String(item.dlzka_m || "").replace(",", ".")) || 0;
+      const celkovyPohyb = mnozstvo + vydane;
 
-      if (dlzka > 50) dlzka = 0; // Poistka proti chybnému formátu
+      // Výpočet percentuálneho pomeru
+      let skladPct = 100;
+      let vydajPct = 0;
+      if (celkovyPohyb > 0) {
+        skladPct = Math.round((mnozstvo / celkovyPohyb) * 100);
+        vydajPct = 100 - skladPct;
+      }
+
+      let dlzka = parseFloat(String(item.dlzka_m || "").replace(",", ".")) || 0;
+      if (dlzka > 50) dlzka = 0;
 
       let textZasoby = `${mnozstvo} ${item.jednotka || 'ks'}`;
       let textVydane = `${vydane} ${item.jednotka || 'ks'}`;
@@ -362,7 +398,7 @@ function renderUI() {
         }
       }
 
-      // 1. Zoznam pre výdaj: VYNECHÁME WPC_hneda, aby obsluha vyberala iba Svetlú alebo Sivú
+      // Výberové pole (vynechaná WPC_hneda)
       if (item.id.toLowerCase() !== "wpc_hneda") {
         const opt = document.createElement("option");
         opt.value = item.id;
@@ -370,16 +406,26 @@ function renderUI() {
         select.appendChild(opt);
       }
 
-      // 2. Horná tabuľka: Aktuálny stav skladu
+      // 1. Tabuľka: Aktuálny stav skladu s grafickým pruhom
       const trStock = document.createElement("tr");
       const badgeClass = mnozstvo > 10 ? "stock-ok" : "stock-low";
       trStock.innerHTML = `
-        <td><strong>${item.nazov}</strong></td>
-        <td><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
+        <td>
+          <strong>${item.nazov}</strong>
+          <div class="bar-container">
+            <div class="bar-stock" style="width: ${skladPct}%;"></div>
+            <div class="bar-dispatched" style="width: ${vydajPct}%;"></div>
+          </div>
+          <div class="item-meta">
+            <span>Sklad: ${skladPct}%</span>
+            <span>Vydané: ${vydajPct}%</span>
+          </div>
+        </td>
+        <td style="vertical-align: top;"><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
       `;
       stockTbody.appendChild(trStock);
 
-     // 3. Dolná tabuľka: Celkovo vydané zo skladu
+      // 2. Tabuľka: Celkovo vydané zo skladu
       const trDispatch = document.createElement("tr");
       const dispatchBadgeClass = vydane > 0 ? "dispatch-badge-active" : "dispatch-badge-zero";
       trDispatch.innerHTML = `
