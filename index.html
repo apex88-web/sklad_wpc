@@ -232,14 +232,19 @@
     loadStock();
   }
 
-  function logout() {
+function logout() {
     localStorage.removeItem("sklad_pin");
     currentPin = "";
-    inventory = []; // Vyčistí načítané zásoby z pamäte stránky
+    inventory = [];
     const select = document.getElementById("itemSelect");
     if (select) select.innerHTML = '<option value="">Načítavam skladové položky...</option>';
-    const tbody = document.querySelector("#stockTable tbody");
-    if (tbody) tbody.innerHTML = '<tr><td colspan="2">Načítavam dáta...</td></tr>';
+    
+    const stockTbody = document.querySelector("#stockTable tbody");
+    if (stockTbody) stockTbody.innerHTML = '<tr><td colspan="2">Načítavam dáta...</td></tr>';
+    
+    const dispatchTbody = document.querySelector("#dispatchedTable tbody");
+    if (dispatchTbody) dispatchTbody.innerHTML = '<tr><td colspan="2">Načítavam dáta...</td></tr>';
+    
     showLogin("Sklad bol uzamknutý.");
   }
 
@@ -254,9 +259,13 @@
 
   // Načítanie zásob cez JSONP vrátane overenia PINu
   // Načítanie zásob cez JSONP s čistým prepisom
-  function loadStock() {
-    const tbody = document.querySelector("#stockTable tbody");
-    tbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem zásoby...</td></tr>';
+function loadStock() {
+    const stockTbody = document.querySelector("#stockTable tbody");
+    const dispatchTbody = document.querySelector("#dispatchedTable tbody");
+
+    // Nastavíme hlásenie do oboch tabuliek súčasne
+    if (stockTbody) stockTbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem zásoby...</td></tr>';
+    if (dispatchTbody) dispatchTbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem výdaje...</td></tr>';
 
     // 1. Dôkladné odstránenie starého script tagu, ak existuje
     const existingScript = document.getElementById("jsonp-stock");
@@ -264,11 +273,10 @@
       existingScript.remove();
     }
 
-    // 2. Unikátny názov funkcie pre každé volanie, aby nevznikal konflikt v pamäti
+    // 2. Unikátny názov funkcie pre každé volanie
     const callbackName = "onStockLoaded_" + Date.now();
 
     window[callbackName] = function(res) {
-      // Upratanie po úspešnom volaní
       delete window[callbackName];
       const s = document.getElementById("jsonp-stock");
       if (s) s.remove();
@@ -285,22 +293,23 @@
         inventory = res.data;
         renderUI();
       } else {
-        tbody.innerHTML = '<tr><td colspan="2" style="color:red;">Chyba spracovania dát.</td></tr>';
+        if (stockTbody) stockTbody.innerHTML = '<tr><td colspan="2" style="color:red;">Chyba spracovania dát.</td></tr>';
+        if (dispatchTbody) dispatchTbody.innerHTML = '<tr><td colspan="2" style="color:red;">Chyba spracovania dát.</td></tr>';
       }
     };
 
-    // 3. Vytvorenie a pripojenie nového script elementu
+    // 3. Pripojenie nového skriptu
     const script = document.createElement("script");
     script.id = "jsonp-stock";
     const sep = SCRIPT_URL.includes("?") ? "&" : "?";
     
-    // Parameter t zabezpečí, že prehliadač nikdy nepoužije starú medzipamäť
     script.src = `${SCRIPT_URL}${sep}akcia=nacitaj&pin=${encodeURIComponent(currentPin)}&callback=${callbackName}&t=${Date.now()}`;
     
     script.onerror = function() {
       delete window[callbackName];
       script.remove();
-      tbody.innerHTML = '<tr><td colspan="2" style="color:red; font-weight:bold;">Chyba spojenia so serverom.</td></tr>';
+      if (stockTbody) stockTbody.innerHTML = '<tr><td colspan="2" style="color:red; font-weight:bold;">Chyba spojenia so serverom.</td></tr>';
+      if (dispatchTbody) dispatchTbody.innerHTML = '<tr><td colspan="2" style="color:red; font-weight:bold;">Chyba spojenia so serverom.</td></tr>';
     };
 
     document.body.appendChild(script);
