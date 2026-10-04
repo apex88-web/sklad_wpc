@@ -380,6 +380,89 @@ function renderUI() {
       dispatchTbody.appendChild(trDispatch);
     });
   }
+  // Obsluha odoslania formulára pre výdaj materiálu
+  document.getElementById("dispatchForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const itemId = document.getElementById("itemSelect").value;
+    const amountVal = parseFloat(document.getElementById("amount").value);
+    const noteVal = document.getElementById("note").value.trim();
+    const submitBtn = document.getElementById("submitBtn");
+
+    if (!itemId) {
+      alert("Vyberte položku na výdaj.");
+      return;
+    }
+
+    if (isNaN(amountVal) || amountVal <= 0) {
+      alert("Zadajte platné množstvo väčšie ako 0.");
+      return;
+    }
+
+    // Deaktivácia tlačidla počas odosielania
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Odosielam výdaj...";
+
+    // 1. Odstránenie starého skriptu výdaja, ak existuje
+    const oldScript = document.getElementById("jsonp-dispatch");
+    if (oldScript) oldScript.remove();
+
+    // 2. Unikátny callback pre výdaj
+    const dispatchCallback = "onDispatchDone_" + Date.now();
+
+    window[dispatchCallback] = function(res) {
+      delete window[dispatchCallback];
+      const s = document.getElementById("jsonp-dispatch");
+      if (s) s.remove();
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Potvrdiť výdaj zo skladu";
+
+      if (res && res.status === "auth_error") {
+        alert("Chyba overenia: Neplatný PIN kód.");
+        logout();
+        return;
+      }
+
+      if (res && res.status === "success") {
+        alert(`Výdaj úspešný!\nPoložka: ${res.nazov}\nNová zásoba: ${res.novaZasoba}`);
+        // Reset formulára
+        document.getElementById("amount").value = "";
+        document.getElementById("note").value = "";
+        // Znovunačítanie oboch tabuliek (sklad aj vydané)
+        loadStock();
+      } else {
+        alert("Chyba pri výdaji: " + (res && res.message ? res.message : "Neznáma chyba"));
+      }
+    };
+
+    // 3. Odoslanie cez JSONP do Apps Scriptu
+    const script = document.createElement("script");
+    script.id = "jsonp-dispatch";
+    const sep = SCRIPT_URL.includes("?") ? "&" : "?";
+    
+    const params = new URLSearchParams({
+      akcia: "vydaj",
+      id: itemId,
+      mnozstvo: amountVal,
+      poznamka: noteVal,
+      pin: currentPin,
+      callback: dispatchCallback,
+      t: Date.now()
+    });
+
+    script.src = `${SCRIPT_URL}${sep}${params.toString()}`;
+
+    script.onerror = function() {
+      delete window[dispatchCallback];
+      script.remove();
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Potvrdiť výdaj zo skladu";
+      alert("Chyba spojenia so serverom pri odosielaní výdaja.");
+    };
+
+    document.body.appendChild(script);
+  });
 </script>
 </body>
 </html>
