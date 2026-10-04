@@ -22,35 +22,38 @@
       border-radius: 8px; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.06); 
     }
-   .header-bar {
+    
+    /* Vyladená hlavička s logami */
+    .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
       border-bottom: 1px solid #eee;
-      padding-bottom: 12px;
+      padding-bottom: 14px;
       gap: 15px;
-      flex-wrap: wrap;
     }
     .header-branding {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       flex-wrap: wrap;
     }
     .header-logos {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
     .header-logo {
-      height: 38px;          /* Zjednotená výška pre obe logá */
-      width: auto;           /* Zachová správny pomer strán */
+      height: 36px;
+      width: auto;
       object-fit: contain;
       display: block;
     }
-    h1 { font-size: 22px; color: #222; margin: 0; }
+    
+    h1 { font-size: 20px; color: #222; margin: 0; }
     h2 { font-size: 18px; color: #333; margin-top: 0; }
+    
     .card { 
       background: #fafafa; 
       border: 1px solid #e1e4e8; 
@@ -88,6 +91,7 @@
       padding: 6px 12px;
       font-size: 13px;
       width: auto;
+      white-space: nowrap;
       border-radius: 4px;
     }
     .btn-logout:hover { background: #fee; color: #c00; border-color: #fcc; }
@@ -116,7 +120,6 @@
       font-size: 24px;
       margin-bottom: 15px;
     }
-   /* Položka, z ktorej sa ešte nič nevydalo */
     .dispatch-badge-zero {
       display: inline-block;
       padding: 4px 8px;
@@ -126,7 +129,6 @@
       background: #f1f5f9;
       color: #94a3b8;
     }
-    /* Položka, z ktorej už bol realizovaný výdaj (červené podsvietenie) */
     .dispatch-badge-active {
       display: inline-block;
       padding: 4px 8px;
@@ -137,7 +139,6 @@
       color: #dc2626;
       border: 1px solid #fecaca;
     }
-    /* Obal pre pruhový graf v riadku */
     .bar-container {
       width: 100%;
       background: #e2e8f0;
@@ -148,12 +149,12 @@
       margin-top: 6px;
     }
     .bar-stock {
-      background: #16a34a; /* Zelená - skladom */
+      background: #16a34a;
       height: 100%;
       transition: width 0.3s ease;
     }
     .bar-dispatched {
-      background: #dc2626; /* Červená - vydané */
+      background: #dc2626;
       height: 100%;
       transition: width 0.3s ease;
     }
@@ -163,6 +164,20 @@
       margin-top: 3px;
       display: flex;
       justify-content: space-between;
+    }
+
+    /* Optimalizácia hlavičky na úzkych obrazovkách telefónu */
+    @media (max-width: 600px) {
+      .header-bar {
+        align-items: flex-start;
+      }
+      .header-logo {
+        height: 28px;
+      }
+      h1 {
+        font-size: 18px;
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -182,7 +197,8 @@
   </div>
 
   <!-- 2. HLAVNÁ APLIKÁCIA SKLADU (pred odomknutím skrytá) -->
-  <div class="header-bar">
+  <div id="appSection" style="display: none;">
+    <div class="header-bar">
       <div class="header-branding">
         <div class="header-logos">
           <!-- Logo 1: wpcdrevoplasty.sk -->
@@ -220,7 +236,7 @@
       </form>
     </div>
 
- <!-- 1. TABUĽKA: AKTUÁLNY STAV SKLADU -->
+    <!-- 1. TABUĽKA: AKTUÁLNY STAV SKLADU -->
     <h2>Aktuálny stav skladu <span id="lastUpdated" style="font-size: 13px; font-weight: normal; color: #666; margin-left: 8px;"></span></h2>
     <table id="stockTable">
       <thead>
@@ -249,15 +265,16 @@
         <tr><td colspan="2">Načítavam dáta...</td></tr>
       </tbody>
     </table>
+  </div> <!-- Ukončenie #appSection -->
+
+</div> <!-- Ukončenie .container -->
 
 <script>
-  // Doplňte vašu overenú URL adresu z Apps Scriptu končiacu na /exec
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyaHrYNWoJzN2hqbD36SF65IQnjHUhjG5vVr35VajUdXWY6gXoVU4TJnNcBkJQreriA/exec";
 
   let inventory = [];
   let currentPin = localStorage.getItem("sklad_pin") || "";
 
-  // Kontrola pri načítaní stránky
   window.addEventListener("DOMContentLoaded", () => {
     if (currentPin) {
       unlockAppAndLoad();
@@ -285,7 +302,7 @@
     loadStock();
   }
 
-function logout() {
+  function logout() {
     localStorage.removeItem("sklad_pin");
     currentPin = "";
     inventory = [];
@@ -301,7 +318,6 @@ function logout() {
     showLogin("Sklad bol uzamknutý.");
   }
 
-  // Odoslanie PINu
   document.getElementById("pinForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const pinVal = document.getElementById("pinInput").value.trim();
@@ -310,23 +326,16 @@ function logout() {
     unlockAppAndLoad();
   });
 
-  // Načítanie zásob cez JSONP vrátane overenia PINu
-  // Načítanie zásob cez JSONP s čistým prepisom
-function loadStock() {
+  function loadStock() {
     const stockTbody = document.querySelector("#stockTable tbody");
     const dispatchTbody = document.querySelector("#dispatchedTable tbody");
 
-    // Nastavíme hlásenie do oboch tabuliek súčasne
     if (stockTbody) stockTbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem zásoby...</td></tr>';
     if (dispatchTbody) dispatchTbody.innerHTML = '<tr><td colspan="2">Overujem PIN a sťahujem výdaje...</td></tr>';
 
-    // 1. Dôkladné odstránenie starého script tagu, ak existuje
     const existingScript = document.getElementById("jsonp-stock");
-    if (existingScript) {
-      existingScript.remove();
-    }
+    if (existingScript) existingScript.remove();
 
-    // 2. Unikátny názov funkcie pre každé volanie
     const callbackName = "onStockLoaded_" + Date.now();
 
     window[callbackName] = function(res) {
@@ -351,7 +360,6 @@ function loadStock() {
       }
     };
 
-    // 3. Pripojenie nového skriptu
     const script = document.createElement("script");
     script.id = "jsonp-stock";
     const sep = SCRIPT_URL.includes("?") ? "&" : "?";
@@ -368,7 +376,7 @@ function loadStock() {
     document.body.appendChild(script);
   }
 
-function renderUI() {
+  function renderUI() {
     const now = new Date();
     const formattedTime = now.toLocaleDateString('sk-SK') + ', ' + now.toLocaleTimeString('sk-SK');
     const updateEl = document.getElementById("lastUpdated");
@@ -394,7 +402,6 @@ function renderUI() {
       const vydane = Number(item.vydane) || 0;
       const celkovyPohyb = mnozstvo + vydane;
 
-      // Výpočet percentuálneho pomeru pre grafický pásik
       let skladPct = 100;
       let vydajPct = 0;
       if (celkovyPohyb > 0) {
@@ -414,7 +421,6 @@ function renderUI() {
         const kat = (item.kategoria || "").trim().toLowerCase();
         
         if (kat === "doska" || kat === "dosky") {
-          // Automatické vyťaženie šírky z názvu (napr. z "148*23*5000" vezme 148 mm -> 0.148 m)
           const match = item.nazov.match(/(\d+)\s*\*\s*\d+\s*\*\s*\d+/);
           const sirkaM = match ? (parseFloat(match[1]) / 1000) : 0.148;
 
@@ -429,7 +435,6 @@ function renderUI() {
         }
       }
 
-      // Výberové pole (vynechaná WPC_hneda)
       if (item.id.toLowerCase() !== "wpc_hneda") {
         const opt = document.createElement("option");
         opt.value = item.id;
@@ -466,8 +471,8 @@ function renderUI() {
       dispatchTbody.appendChild(trDispatch);
     });
   }
-  
-  // Obsluha odoslania formulára pre výdaj materiálu
+
+  // Obsluha výdaja
   document.getElementById("dispatchForm").addEventListener("submit", (e) => {
     e.preventDefault();
 
@@ -486,15 +491,12 @@ function renderUI() {
       return;
     }
 
-    // Deaktivácia tlačidla počas odosielania
     submitBtn.disabled = true;
     submitBtn.textContent = "Odosielam výdaj...";
 
-    // 1. Odstránenie starého skriptu výdaja, ak existuje
     const oldScript = document.getElementById("jsonp-dispatch");
     if (oldScript) oldScript.remove();
 
-    // 2. Unikátny callback pre výdaj
     const dispatchCallback = "onDispatchDone_" + Date.now();
 
     window[dispatchCallback] = function(res) {
@@ -513,17 +515,14 @@ function renderUI() {
 
       if (res && res.status === "success") {
         alert(`Výdaj úspešný!\nPoložka: ${res.nazov}\nNová zásoba: ${res.novaZasoba}`);
-        // Reset formulára
         document.getElementById("amount").value = "";
         document.getElementById("note").value = "";
-        // Znovunačítanie oboch tabuliek (sklad aj vydané)
         loadStock();
       } else {
         alert("Chyba pri výdaji: " + (res && res.message ? res.message : "Neznáma chyba"));
       }
     };
 
-    // 3. Odoslanie cez JSONP do Apps Scriptu
     const script = document.createElement("script");
     script.id = "jsonp-dispatch";
     const sep = SCRIPT_URL.includes("?") ? "&" : "?";
