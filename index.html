@@ -316,12 +316,18 @@ function renderUI() {
     }
 
     inventory.forEach(item => {
-      let textZasoby = `${item.mnozstvo} ${item.jednotka || 'ks'}`;
-      let textVydane = `${item.vydane || 0} ${item.jednotka || 'ks'}`;
+      const mnozstvo = Number(item.mnozstvo) || 0;
+      const vydane = Number(item.vydane) || 0;
+      let dlzka = parseFloat(String(item.dlzka_m || "").replace(",", ".")) || 0;
 
-      if (item.dlzka_m > 0) {
-        const celkovoBm = Math.round((item.mnozstvo * item.dlzka_m) * 100) / 100;
-        const vydaneBm = Math.round(((item.vydane || 0) * item.dlzka_m) * 100) / 100;
+      if (dlzka > 50) dlzka = 0; // Poistka proti chybnému formátu
+
+      let textZasoby = `${mnozstvo} ${item.jednotka || 'ks'}`;
+      let textVydane = `${vydane} ${item.jednotka || 'ks'}`;
+
+      if (dlzka > 0) {
+        const celkovoBm = Math.round((mnozstvo * dlzka) * 100) / 100;
+        const vydaneBm = Math.round((vydane * dlzka) * 100) / 100;
         const kat = (item.kategoria || "").trim().toLowerCase();
         
         if (kat === "doska" || kat === "dosky") {
@@ -335,22 +341,24 @@ function renderUI() {
         }
       }
 
-      // 1. Výberové pole pre výdaj
-      const opt = document.createElement("option");
-      opt.value = item.id;
-      opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
-      select.appendChild(opt);
+      // 1. Zoznam pre výdaj: VYNECHÁME WPC_hneda, aby obsluha vyberala iba Svetlú alebo Sivú
+      if (item.id.toLowerCase() !== "wpc_hneda") {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = `${item.nazov} (Skladom: ${textZasoby})`;
+        select.appendChild(opt);
+      }
 
-      // 2. Riadok v tabuľke zásob
+      // 2. Horná tabuľka: Aktuálny stav skladu
       const trStock = document.createElement("tr");
-      const badgeClass = item.mnozstvo > 10 ? "stock-ok" : "stock-low";
+      const badgeClass = mnozstvo > 10 ? "stock-ok" : "stock-low";
       trStock.innerHTML = `
         <td><strong>${item.nazov}</strong></td>
         <td><span class="stock-badge ${badgeClass}">${textZasoby}</span></td>
       `;
       stockTbody.appendChild(trStock);
 
-      // 3. Riadok v tabuľke vydaného materiálu
+      // 3. Dolná tabuľka: Celkovo vydané zo skladu
       const trDispatch = document.createElement("tr");
       trDispatch.innerHTML = `
         <td><strong>${item.nazov}</strong></td>
