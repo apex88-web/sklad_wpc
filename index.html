@@ -368,7 +368,7 @@ function renderUI() {
       const vydane = Number(item.vydane) || 0;
       const celkovyPohyb = mnozstvo + vydane;
 
-      // Výpočet percentuálneho pomeru
+      // Výpočet percentuálneho pomeru pre grafický pásik
       let skladPct = 100;
       let vydajPct = 0;
       if (celkovyPohyb > 0) {
@@ -388,8 +388,13 @@ function renderUI() {
         const kat = (item.kategoria || "").trim().toLowerCase();
         
         if (kat === "doska" || kat === "dosky") {
-          const plochaM2 = Math.round((celkovoBm * 0.150) * 100) / 100;
-          const vydaneM2 = Math.round((vydaneBm * 0.150) * 100) / 100;
+          // Automatické vyťaženie šírky z názvu (napr. z "148*23*5000" vezme 148 mm -> 0.148 m)
+          const match = item.nazov.match(/(\d+)\s*\*\s*\d+\s*\*\s*\d+/);
+          const sirkaM = match ? (parseFloat(match[1]) / 1000) : 0.148;
+
+          const plochaM2 = Math.round((celkovoBm * sirkaM) * 100) / 100;
+          const vydaneM2 = Math.round((vydaneBm * sirkaM) * 100) / 100;
+
           textZasoby += ` (${celkovoBm} bm | ${plochaM2} m²)`;
           textVydane += ` (${vydaneBm} bm | ${vydaneM2} m²)`;
         } else {
@@ -406,7 +411,7 @@ function renderUI() {
         select.appendChild(opt);
       }
 
-      // 1. Tabuľka: Aktuálny stav skladu s grafickým pruhom
+      // 1. Tabuľka: Aktuálny stav skladu
       const trStock = document.createElement("tr");
       const badgeClass = mnozstvo > 10 ? "stock-ok" : "stock-low";
       trStock.innerHTML = `
@@ -435,6 +440,7 @@ function renderUI() {
       dispatchTbody.appendChild(trDispatch);
     });
   }
+  
   // Obsluha odoslania formulára pre výdaj materiálu
   document.getElementById("dispatchForm").addEventListener("submit", (e) => {
     e.preventDefault();
