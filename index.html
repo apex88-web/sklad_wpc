@@ -97,14 +97,26 @@
       font-size: 24px;
       margin-bottom: 15px;
     }
-    .dispatch-badge {
+   /* Položka, z ktorej sa ešte nič nevydalo */
+    .dispatch-badge-zero {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      font-size: 14px;
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+    /* Položka, z ktorej už bol realizovaný výdaj (červené podsvietenie) */
+    .dispatch-badge-active {
       display: inline-block;
       padding: 4px 8px;
       border-radius: 4px;
       font-weight: bold;
       font-size: 14px;
-      background: #eef2f6;
-      color: #334155;
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
     }
   </style>
 </head>
@@ -358,11 +370,12 @@ function renderUI() {
       `;
       stockTbody.appendChild(trStock);
 
-      // 3. Dolná tabuľka: Celkovo vydané zo skladu
+     // 3. Dolná tabuľka: Celkovo vydané zo skladu
       const trDispatch = document.createElement("tr");
+      const dispatchBadgeClass = vydane > 0 ? "dispatch-badge-active" : "dispatch-badge-zero";
       trDispatch.innerHTML = `
         <td><strong>${item.nazov}</strong></td>
-        <td><span class="dispatch-badge">${textVydane}</span></td>
+        <td><span class="${dispatchBadgeClass}">${textVydane}</span></td>
       `;
       dispatchTbody.appendChild(trDispatch);
     });
